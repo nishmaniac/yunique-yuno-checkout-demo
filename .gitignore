@@ -116,4 +116,5 @@ dist
 
 .env
 
-**/.DS_Store
+**/.DS_Storenode_modules/
+.DS_Store
