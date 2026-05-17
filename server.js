@@ -39,7 +39,7 @@ app.use(express.json())
 app.use('/static', express.static(staticDirectory))
 
 app.get('/', (req, res) => {
-  res.sendFile(indexPage)
+  res.sendFile(seamlessCheckoutPage)
 })
 
 app.get('/checkout', (req, res) => {
@@ -102,12 +102,12 @@ app.post('/checkout/sessions', async (req, res) => {
       body: JSON.stringify({
         account_id: ACCOUNT_CODE,
         merchant_order_id: '1655401222',
-        payment_description: 'Test MP 1654536326',
+        payment_description: 'Yunique Fashion Store - Linen Midi Dress',
         country,
         customer_id: CUSTOMER_ID,
         amount: {
           currency,
-          value: 2000,
+          value: 110,
         },
       }),
     }
@@ -117,201 +117,135 @@ app.post('/checkout/sessions', async (req, res) => {
 })
 
 app.post('/checkout/seamless/sessions', async (req, res) => {
-  const country = req.query.country || 'CO'
-  const { currency } = getCountryData(country)
+  try {
+    const customer = req.body.customer || {}
+    const delivery = req.body.delivery || {}
+    const order = req.body.order || {}
 
-  const response = await fetch(
-    `${API_URL}/v1/checkout/sessions`,
-    {
+    const country = delivery.country || req.query.country || 'US'
+    const currency = order.currency || 'USD'
+
+    const itemAmount = Number(order.itemAmount || 100)
+    const shippingAmount = Number(order.shippingAmount || 10)
+    const totalAmount = Number(order.totalAmount || 110)
+
+    const checkoutSessionPayload = {
+      account_id: ACCOUNT_CODE,
+      merchant_order_id: order.merchantOrderId || `YUNIQUE-${Date.now()}`,
+      payment_description: `Yunique Fashion Store - ${order.productName || 'Linen Midi Dress'}`,
+      country,
+      customer_id: CUSTOMER_ID,
+
+      amount: {
+        currency,
+        value: totalAmount,
+      },
+
+      workflow: 'SDK_SEAMLESS',
+
+      customer_payer: {
+        id: CUSTOMER_ID,
+        merchant_customer_id: CUSTOMER_ID,
+        first_name: customer.firstName || '',
+        last_name: customer.lastName || '',
+        email: customer.email || '',
+
+        billing_address: {
+          address_line_1: delivery.address || '',
+          address_line_2: delivery.apartment || '',
+          city: delivery.city || '',
+          country,
+          zip_code: delivery.postalCode || '',
+        },
+
+        shipping_address: {
+          address_line_1: delivery.address || '',
+          address_line_2: delivery.apartment || '',
+          city: delivery.city || '',
+          country,
+          zip_code: delivery.postalCode || '',
+        },
+      },
+
+      payment_method: {
+        type: 'CARD',
+        vault_on_success: false,
+        detail: {
+          card: {
+            verify: false,
+            capture: true,
+          },
+        },
+      },
+
+      additional_data: {
+        order: {
+          shipping_amount: shippingAmount,
+          fee_amount: 0,
+          items: [
+            {
+              id: order.productId || 'YUNIQUE-DRESS-001',
+              name: order.productName || 'Linen Midi Dress',
+              category: order.category || 'Fashion',
+              quantity: 1,
+              unit_amount: itemAmount,
+              brand: order.brand || 'Yunique',
+              sku_code: order.sku || 'YUNIQUE-DRESS-001',
+              manufacture_part_number: order.sku || 'YUNIQUE-DRESS-001',
+            },
+          ],
+        },
+      },
+
+      metadata: [
+        {
+          key: 'store',
+          value: 'Yunique Fashion Store',
+        },
+        {
+          key: 'integration',
+          value: 'seamless_sdk_demo',
+        },
+      ],
+    }
+
+    console.log('Creating Yuno checkout session with payload:')
+    console.log(JSON.stringify(checkoutSessionPayload, null, 2))
+
+    const response = await fetch(`${API_URL}/v1/checkout/sessions`, {
       method: 'POST',
       headers: {
         'public-api-key': PUBLIC_API_KEY,
         'private-secret-key': PRIVATE_SECRET_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        account_id: ACCOUNT_CODE,
-        merchant_order_id: '1655401222',
-        payment_description: 'Test MP 1654536326',
-        country,
-        customer_id: CUSTOMER_ID,
-        amount: {
-          currency,
-          value: 2000,
-        },
-        workflow: 'SDK_SEAMLESS',
-        additional_data: {
-          order: {
-            shipping_amount: 12,
-            fee_amount: 111,
-            tip_amount: '12',
-            taxes: [
-              {
-                type: 'VAT',
-                tax_base: 123,
-                value: 1,
-                percentage: 1
-              }
-            ],
-            items: [
-              {
-                category: 'coupons',
-                id: 'ASD',
-                name: 'rter',
-                quantity: 12312,
-                unit_amount: 1,
-                brand: 'ASDA',
-                sku_code: '123123',
-                manufacture_part_number: 'SADSADAS'
-              }
-            ]
-          },
-          airline: {
-            pnr: 'SADSDASD',
-            legs: [
-              {
-                departure_airport: 'ASD',
-                departure_datetime: '2024-07-03T05:00:00',
-                arrival_airport: 'AMS',
-                departure_airport_timezone: '-03:00',
-                arrival_datetime: '2024-08-03T05:00:00',
-                carrier_code: 'KL',
-                flight_number: '842',
-                fare_basis_code: 'HL7LNR',
-                fare_class_code: 'FR',
-                base_fare: 200,
-                base_fare_currency: 'BRL',
-                stopover_code: 's'
-              }
-            ],
-            passengers: [
-              {
-                document: {
-                  document_number: '351.040.753-97',
-                  document_type: 'CI',
-                  country: 'BO'
-                },
-                phone: {
-                  country_code: '57',
-                  number: '3132450765'
-                },
-                first_name: 'John',
-                last_name: 'Doe',
-                middle_name: 'Theodore',
-                type: 'A',
-                date_of_birth: '05-01-1984',
-                nationality: 'BR',
-                loyalty_number: '123456',
-                loyalty_tier: '1'
-              }
-            ],
-            tickets: [
-              {
-                issue: {
-                  carrier_prefix_code: 'ASDASD',
-                  travel_agent_code: 'DSADAS',
-                  travel_agent_name: 'ASDA',
-                  address: 'DASDAS',
-                  city: 'ASDASD',
-                  country: 'BR'
-                },
-                ticket_number: '123456',
-                e_ticket: false,
-                restricted: false,
-                total_fare_amount: 80,
-                total_tax_amount: 22,
-                total_fee_amount: 14
-              }
-            ]
-          }
-        },
-        customer_payer: {
-          merchant_customer_id: '1',
-          first_name: 'John',
-          last_name: 'Doe',
-          date_of_birth: '1990-02-28',
-          email: 'johndoe@y.uno',
-          nationality: 'BO',
-          ip_address: '192.168.123.167',
-          device_fingerprint: 'hi88287gbd8d7d782ge',
-          browser_info: {
-            user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-            accept_header: 'true',
-            color_depth: '15',
-            screen_height: '2048',
-            screen_width: '1152',
-            javascript_enabled: false,
-            language: 'es'
-          },
-          document: {
-            document_number: '351.040.753-97',
-            document_type: 'CI'
-          },
-          billing_address: {
-            address_line_1: 'Calle 34 # 56 - 78',
-            address_line_2: 'Apartamento 502, Torre I',
-            city: 'Bogota',
-            country: 'AR',
-            state: 'Cundinamarca',
-            zip_code: '111111',
-            neighborhood: 'Barrio 11'
-          },
-          shipping_address: {
-            address_line_1: 'Calle 34 # 56 - 78',
-            address_line_2: 'Apartamento 502, Torre I',
-            city: 'Bogota',
-            state: 'Cundinamarca',
-            zip_code: '111111',
-            neighborhood: 'Barrio 11',
-            country: 'CO'
-          },
-          phone: {
-            country_code: '57',
-            number: '3132450765'
-          }
-        },
-        payment_method: {
-          detail: {
-            card: {
-              verify: false,
-              capture: true
-            },
-            ticket: {
-              benefit_type: 'PRIVATE'
-            }
-          },
-          vaulted_token: null,
-          type: 'CARD',
-          vault_on_success: false
-        },
-        installments: {
-          plan: [
-            {
-              installment: 1,
-              rate: 1
-            }
-          ]
-        },
-        fraud_screening: {
-          stand_alone: false
-        },
-        metadata: [
-          {
-            key: 'ID',
-            value: 'SD00'
-          }
-        ]
-      }),
-    }
-  ).then((resp) => resp.json())
+      body: JSON.stringify(checkoutSessionPayload),
+    })
 
-  res.send(response)
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('Yuno checkout session creation failed:')
+      console.error(JSON.stringify(data, null, 2))
+      return res.status(response.status).json(data)
+    }
+
+    res.send({
+      ...data,
+      country,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      message: error.message,
+    })
+  }
 })
 
 app.post('/payments', async (req, res) => {
   const checkoutSession = req.body.checkoutSession
   const oneTimeToken = req.body.oneTimeToken
-  const country = req.query.country || 'CO'
+  const country = req.query.country || 'US'
   const { currency, documentNumber, documentType, amount } = getCountryData(country)
 
   const response = await fetch(`${API_URL}/v1/payments`, {
@@ -323,7 +257,7 @@ app.post('/payments', async (req, res) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      description: 'Test Addi',
+      description: 'Yunique Fashion Store',
       account_id: ACCOUNT_CODE,
       merchant_order_id: '0000022',
       country,
@@ -373,25 +307,25 @@ app.post('/payments', async (req, res) => {
           },
         },
         order: {
-          fee_amount: 40.5,
+          fee_amount: 0,
           items: [
             {
-              brand: 'XYZ',
-              category: 'Clothes',
-              id: '123AD',
-              manufacture_part_number: 'XYZ123456',
-              name: 'Skirt',
-              quantity: 3,
-              sku_code: '8765432109',
-              unit_amount: 20,
+              brand: 'Yunique',
+              category: 'Fashion',
+              id: 'YUNIQUE-DRESS-001',
+              manufacture_part_number: 'YUNIQUE-DRESS-001',
+              name: 'Linen Midi Dress',
+              quantity: 1,
+              sku_code: 'YUNIQUE-DRESS-001',
+              unit_amount: 100,
             },
-          ],
-          shipping_amount: 10.35,
-        },
+  ],
+  shipping_amount: 10,
+},
       },
       amount: {
         currency,
-        value: amount,
+        value: 110,
       },
       checkout: {
         session: checkoutSession,
@@ -548,6 +482,66 @@ function generateBaseUrlApi() {
   baseURL = baseAPIurl.replace('_ENVIRONMENT_', environmentSuffix)
 
   return baseURL
+}
+
+function clean(value) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+async function createYuniqueCustomer(customer, delivery, country) {
+  const customerPayload = {
+    country,
+    merchant_customer_id: `YUNIQUE-CUSTOMER-${Date.now()}`,
+    first_name: clean(customer.firstName),
+    last_name: clean(customer.lastName),
+    email: clean(customer.email),
+
+    billing_address: {
+      address_line_1: clean(delivery.address),
+      address_line_2: clean(delivery.apartment),
+      city: clean(delivery.city),
+      country,
+      zip_code: clean(delivery.postalCode),
+    },
+
+    shipping_address: {
+      address_line_1: clean(delivery.address),
+      address_line_2: clean(delivery.apartment),
+      city: clean(delivery.city),
+      country,
+      zip_code: clean(delivery.postalCode),
+    },
+
+    metadata: [
+      {
+        key: "source",
+        value: "yunique_checkout_demo",
+      },
+    ],
+  }
+
+  console.log("Creating Yuno customer with payload:")
+  console.log(JSON.stringify(customerPayload, null, 2))
+
+  const response = await fetch(`${API_URL}/v1/customers`, {
+    method: "POST",
+    headers: {
+      "public-api-key": PUBLIC_API_KEY,
+      "private-secret-key": PRIVATE_SECRET_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(customerPayload),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    console.error("Yuno customer creation failed:")
+    console.error(JSON.stringify(data, null, 2))
+    throw new Error("Could not create Yuno customer")
+  }
+
+  return data
 }
 
 function createCustomer() {

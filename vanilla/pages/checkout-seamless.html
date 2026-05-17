@@ -1,22 +1,478 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://assets-global.website-files.com/6277c350218d32e9e5dc0380/627e9998bb4b6124743a90fc_favicon-yuno32x32.png" rel="shortcut icon" type="image/x-icon"/>
-  <link href="https://assets-global.website-files.com/6277c350218d32e9e5dc0380/627e999c388c6cd2a87050e7_favicon-yuno256x256.png" rel="apple-touch-icon"/>
-  <title>Yuno Seamless Checkout</title>
-  <!-- default fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter">
-  <link rel="stylesheet" href="../static/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yunique Fashion Store Checkout</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #faf9f7;
+      color: #1c1c1c;
+    }
+
+    .site-header {
+      height: 72px;
+      background: #ffffff;
+      border-bottom: 1px solid #eeeeee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-inner {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .logo {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -2px;
+    }
+
+    .logo span {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 14px;
+    }
+
+    .nav a {
+      color: #1c1c1c;
+      text-decoration: none;
+    }
+
+    .checkout-page {
+      max-width: 1100px;
+      margin: 48px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
+      gap: 32px;
+      align-items: start;
+  }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid #eeeeee;
+      padding: 28px;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .step {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #111111;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-bottom: 0;
+    }
+
+    .helper-text {
+      color: #777777;
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      height: 42px;
+      border: 1px solid #e5e5e5;
+      padding: 0 12px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      background: #ffffff;
+    }
+
+    input:focus, select:focus {
+      outline: 1px solid #111111;
+      border-color: #111111;
+    }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding-bottom: 22px;
+      border-bottom: 1px solid #eeeeee;
+      margin-bottom: 18px;
+  }
+
+    .product-image {
+      width: 72px;
+      height: 90px;
+      background: #f2f2f2;
+      overflow: hidden;
+      flex-shrink: 0;
+  }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+  }
+
+    .product-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .product-meta {
+      color: #777777;
+      font-size: 13px;
+    }
+
+    .product-price {
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      color: #777777;
+      font-size: 14px;
+      margin: 14px 0;
+    }
+
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      font-weight: 800;
+      margin-top: 28px;
+    }
+
+    .payment-panel {
+      position: sticky;
+      top: 96px;
+      align-self: start;
+  }
+
+    .payment-heading {
+      margin-bottom: 8px;
+  }
+
+    .payment-heading h2 {
+      font-size: 18px;
+      margin: 0;
+  }
+
+    #root {
+      margin-top: 18px;
+      margin-bottom: 18px;
+    }
+
+    #form-element {
+      margin-bottom: 16px;
+    }
+
+    #action-form-element {
+      margin-bottom: 16px;
+    }
+
+    .pay-button {
+      width: 100%;
+      height: 44px;
+      border: none;
+      background: #1c1c1c;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+
+    .pay-button:hover {
+      background: #000000;
+    }
+
+    .secure-note {
+      margin-top: 14px;
+      color: #777777;
+      font-size: 12px;
+    }
+
+    #status {
+      margin-top: 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+}
+
+    .optional {
+      color: #777777;
+      font-weight: 400;
+}
+    @media (max-width: 850px) {
+      .checkout-page {
+        grid-template-columns: 1fr;
+    }
+
+      .payment-panel {
+        position: static;
+    }
+
+      .nav {
+        display: none;
+    }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+    }
+}
+  </style>
 </head>
+
 <body>
-  <!-- create a component where the SDK will be mounted -->
-  <div id="root"></div>
-  <div id="form-element"></div>
-  <div id="action-form-element"></div>
-  <button id="button-pay">Pagar Ahora</button>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo"><span>yu</span>nique</div>
+
+      <nav class="nav">
+        <a href="#">Women</a>
+        <a href="#">Men</a>
+        <a href="#">Cart (1)</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="checkout-page">
+  <section class="left-column">
+    <section class="panel">
+      <div class="section-heading">
+        <span class="step">1</span>
+        <h2>Customer Details</h2>
+      </div>
+
+      <p class="helper-text">
+        Enter the customer information needed to confirm the order.
+      </p>
+
+      <form id="customer-form">
+        <div class="field-grid">
+          <div>
+            <label for="firstName">First Name</label>
+            <input
+              id="firstName"
+              name="firstName"
+              type="text"
+              autocomplete="given-name"
+              required
+            />
+          </div>
+
+          <div>
+            <label for="lastName">Last Name</label>
+            <input
+              id="lastName"
+              name="lastName"
+              type="text"
+              autocomplete="family-name"
+              required
+            />
+          </div>
+        </div>
+
+        <label for="email">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+        />
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <span class="step">2</span>
+        <h2>Delivery</h2>
+      </div>
+
+      <p class="helper-text">
+        Enter where this order should be delivered.
+      </p>
+
+      <form id="delivery-form">
+        <label for="address">Address</label>
+        <input
+          id="address"
+          name="address"
+          type="text"
+          autocomplete="address-line1"
+          required
+        />
+
+        <label for="apartment">
+          Apartment, suite etc. <span class="optional">(optional)</span>
+        </label>
+        <input
+          id="apartment"
+          name="apartment"
+          type="text"
+          autocomplete="address-line2"
+        />
+
+        <div class="field-grid">
+          <div>
+            <label for="postalCode">Postal Code</label>
+            <input
+              id="postalCode"
+              name="postalCode"
+              type="text"
+              autocomplete="postal-code"
+              required
+            />
+          </div>
+
+          <div>
+            <label for="city">City</label>
+            <input
+              id="city"
+              name="city"
+              type="text"
+              autocomplete="address-level2"
+              required
+            />
+          </div>
+        </div>
+
+        <label for="country">Country</label>
+        <select
+          id="country"
+          name="country"
+          autocomplete="country"
+          required
+        >
+          <option value="" selected disabled>Select country</option>
+          <option value="CO">Colombia</option>
+          <option value="US">United States</option>
+          <option value="MX">Mexico</option>
+          <option value="BR">Brazil</option>
+        </select>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <span class="step">3</span>
+        <h2>Order</h2>
+      </div>
+
+      <div class="product-row">
+        <div class="product-image">
+          <img src="/static/images/dress-001.jpg" alt="Linen Midi Dress" />
+        </div>
+
+        <div>
+          <div class="product-title">Linen Midi Dress</div>
+          <div class="product-meta">Size M · Sand</div>
+        </div>
+
+        <div class="product-price">$100.00</div>
+      </div>
+
+      <div class="summary-line">
+        <span>Subtotal</span>
+        <span>$100.00</span>
+      </div>
+
+      <div class="summary-line">
+        <span>Shipping</span>
+        <span>$11.00</span>
+      </div>
+
+      <div class="summary-total">
+        <span>Total</span>
+        <span>$111.00</span>
+      </div>
+    </section>
+  </section>
+
+  <section class="panel payment-panel">
+    <div class="payment-heading">
+      <h2>Payment</h2>
+    </div>
+
+    <p class="helper-text">
+      Complete your purchase securely without leaving our store.
+    </p>
+
+    <div id="root"></div>
+    <div id="form-element"></div>
+    <div id="action-form-element"></div>
+
+    <button id="button-pay" class="pay-button" type="button">
+      CONTINUE TO PAYMENT
+    </button>
+
+    <p class="secure-note">
+      🔒 Payments are processed securely by Yuno. Your card details never touch our servers.
+    </p>
+
+    <div id="status"></div>
+  </section>
+</main>
 
   <script type="module" src="/static/checkout-seamless.js"></script>
   <script src="https://sdk-web.y.uno/v1.5/main.js" defer></script>

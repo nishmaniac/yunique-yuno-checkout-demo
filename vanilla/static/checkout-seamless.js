@@ -1,70 +1,215 @@
 import { getSeamlessCheckoutSession, getPublicApiKey } from "./api.js"
 
-async function initSeamlessCheckoutLite() {
-  // get checkout session from merchan back
-  const { checkout_session: checkoutSession, country: countryCode } = await getSeamlessCheckoutSession()
-  /**
-   * this should be provided by the merchant
-   * can be one of 'BANCOLOMBIA_TRANSFER' | 'PIX' | 'ADDI' | 'NU_PAY' | 'MERCADO_PAGO_CHECKOUT_PRO | CARD
-   */
-  const PAYMENT_METHOD_TYPE = 'CARD'
-  // this should be provided by the merchant
-  const VAULTED_TOKEN = null
+let yuno = null
+let checkoutReady = false
 
-  // get api key
+const ORDER = {
+  productName: "Linen Midi Dress",
+  productId: "YUNIQUE-DRESS-001",
+  sku: "YUNIQUE-DRESS-001",
+  category: "Fashion",
+  brand: "Yunique",
+  currency: "USD",
+  itemAmount: 100,
+  shippingAmount: 10,
+  totalAmount: 110,
+}
+
+function getFormData(formSelector) {
+  const form = document.querySelector(formSelector)
+  return Object.fromEntries(new FormData(form).entries())
+}
+
+function validateCheckoutForms() {
+  const customerForm = document.querySelector("#customer-form")
+  const deliveryForm = document.querySelector("#delivery-form")
+
+  if (customerForm && !customerForm.reportValidity()) {
+    return false
+  }
+
+  if (deliveryForm && !deliveryForm.reportValidity()) {
+    return false
+  }
+
+  return true
+}
+
+function buildCheckoutPayload() {
+  const customer = getFormData("#customer-form")
+  const delivery = getFormData("#delivery-form")
+
+  return {
+    customer: {
+      firstName: customer.firstName?.trim(),
+      lastName: customer.lastName?.trim(),
+      email: customer.email?.trim(),
+    },
+
+    delivery: {
+      address: delivery.address?.trim(),
+      apartment: delivery.apartment?.trim(),
+      postalCode: delivery.postalCode?.trim(),
+      city: delivery.city?.trim(),
+      country: delivery.country,
+    },
+
+    order: {
+      merchantOrderId: `YUNIQUE-${Date.now()}`,
+      productName: ORDER.productName,
+      productId: ORDER.productId,
+      sku: ORDER.sku,
+      category: ORDER.category,
+      brand: ORDER.brand,
+      currency: ORDER.currency,
+      itemAmount: ORDER.itemAmount,
+      shippingAmount: ORDER.shippingAmount,
+      totalAmount: ORDER.totalAmount,
+    },
+  }
+}
+
+function lockCheckoutForms() {
+  document
+    .querySelectorAll("#customer-form input, #customer-form select, #delivery-form input, #delivery-form select")
+    .forEach((field) => {
+      field.disabled = true
+    })
+}
+
+async function prepareYunoCheckout() {
+  const payButton = document.querySelector("#button-pay")
+  const status = document.querySelector("#status")
+
+  status.textContent = "Preparing secure payment..."
+
+  const checkoutPayload = buildCheckoutPayload()
+
+  console.log("Payload being sent to backend:", checkoutPayload)
+
+  const sessionResponse = await getSeamlessCheckoutSession(checkoutPayload)
+
+  console.log("Yuno checkout session response:", sessionResponse)
+
+  if (!sessionResponse.checkout_session) {
+    console.error("Checkout session creation failed:", sessionResponse)
+    status.textContent = "Could not create checkout session. Check Terminal and browser console."
+    payButton.disabled = false
+    return
+  }
+
   const publicApiKey = await getPublicApiKey()
 
-  // start Yuno SDK
-  const yuno = await Yuno.initialize(publicApiKey)
-  /**
-   * checkout configuration
-   */
-  await yuno.startSeamlessCheckout({ 
-    checkoutSession,
-    // element where the SDK will be mount on
-    elementSelector: '#root', 
-    /**
-     * country can be one of CO, BR, CL, PE, EC, UR, MX
-     */
-    countryCode,
-    /**
-      * language can be one of es, en, pt
+  yuno = await Yuno.initialize(publicApiKey)
+
+  await yuno.startSeamlessCheckout({
+    checkoutSession: sessionResponse.checkout_session,
+    elementSelector: "#root",
+    countryCode: checkoutPayload.delivery.country || "US",
+    language: "en-US",
+    showLoading: true,
+    showPaymentStatus: true,
+
+    renderMode: {
+      type: "element",
+      elementSelector: {
+        apmForm: "#form-element",
+        actionForm: "#action-form-element",
+      },
+    },
+
+    card: {
+      type: "extends",
+      cardSaveEnable: false,
+      hideCardholderName: false,
+      styles: "",
+      texts: {},
+    },
+
+    async yunoCreatePayment() {
+      /*
+        Yuno's Seamless SDK docs say this placeholder should exist.
+        In this sample flow, payment is handled through the checkout session.
       */
-    language: 'es',
-    /**
-     * Empty function.  Won't be called, 
-     */
-    async yunoCreatePayment() { },
-    /**
-     * 
-     * @param {'READY_TO_PAY' | 'CREATED' | 'SUCCEEDED' | 'REJECTED' | 'CANCELLED' | 'ERROR' | 'DECLINED' | 'PENDING' | 'EXPIRED' | 'VERIFIED' | 'REFUNDED'} data
-     */
+    },
+
+    onPaymentMethodSelected(data) {
+      console.log("Payment method selected:", data)
+    },
+
     yunoPaymentResult(data) {
-      console.log('yunoPaymentResult', data)
+      console.log("Payment result:", data)
+
+      if (status) {
+        status.textContent = `Payment result: ${typeof data === "string" ? data : data?.status || "check console"}`
+      }
     },
-    /**
-     * @param { error: 'CANCELED_BY_USER' | any }
-     */
-    yunoError: (error) => {
-      console.log('There was an error', error)
+
+    yunoError(error, data) {
+      console.error("Yuno error:", error, data)
+
+      if (status) {
+        status.textContent = "Payment failed or was cancelled."
+      }
+
+      payButton.disabled = false
     },
-    /**
-     * Required if you'd like to be informed if there is a server call
-     * @param { isLoading: boolean, type: 'DOCUMENT' | 'ONE_TIME_TOKEN'  } data
-     * @optional
-     */
-    onLoading: (args) => {
-      console.log('onLoading', args);
-    }
+
+    onLoading(args) {
+      console.log("Yuno loading:", args)
+    },
   })
 
   await yuno.mountSeamlessCheckout()
 
-  const PayButton = document.querySelector('#button-pay')
+  checkoutReady = true
+  lockCheckoutForms()
 
-  PayButton.addEventListener('click', () => {
-    yuno.startPayment()
-  })
+  payButton.textContent = "PAY $110.00"
+  payButton.disabled = false
+  status.textContent = "Payment methods loaded. Select Card, then click Pay."
 }
 
-window.addEventListener('yuno-sdk-ready', initSeamlessCheckoutLite)
+async function handlePayButtonClick() {
+  const payButton = document.querySelector("#button-pay")
+  const status = document.querySelector("#status")
+
+  if (!validateCheckoutForms()) {
+    return
+  }
+
+  payButton.disabled = true
+
+  try {
+    if (!checkoutReady) {
+      await prepareYunoCheckout()
+      return
+    }
+
+    status.textContent = "Opening payment form..."
+    await yuno.startPayment()
+    payButton.disabled = false
+  } catch (error) {
+    console.error(error)
+    status.textContent = "Something went wrong. Check the browser console and Terminal."
+    payButton.disabled = false
+  }
+}
+
+function initSeamlessCheckout() {
+  const payButton = document.querySelector("#button-pay")
+
+  if (!payButton) {
+    console.error("Could not find #button-pay")
+    return
+  }
+
+  payButton.textContent = "CONTINUE TO PAYMENT"
+  payButton.addEventListener("click", handlePayButtonClick)
+}
+
+if (window.Yuno) {
+  initSeamlessCheckout()
+} else {
+  window.addEventListener("yuno-sdk-ready", initSeamlessCheckout)
+}

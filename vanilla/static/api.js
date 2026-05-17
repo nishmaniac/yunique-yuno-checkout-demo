@@ -7,19 +7,17 @@ export async function getPublicApiKey() {
   .then(resp => resp.publicApiKey)
 }
 
-export async function getCheckoutSession() {
-  return fetch(`/checkout/sessions${window.location.search}`, {
-    method: 'POST'
+export async function getSeamlessCheckoutSession(payload = {}) {
+  return fetch(`/checkout/seamless/sessions${window.location.search}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: {
+      'Content-Type': 'application/json',
+    },
   })
-  .then(resp => resp.json())
+    .then(resp => resp.json())
 }
 
-export async function getSeamlessCheckoutSession() {
-  return fetch(`/checkout/seamless/sessions${window.location.search}`, {
-    method: 'POST'
-  })
-  .then(resp => resp.json())
-}
 
 export async function createPayment(data) {
   return fetch(`/payments${window.location.search}`, {
